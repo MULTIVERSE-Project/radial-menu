@@ -1,8 +1,14 @@
 local P = mvp.meta.package:New()
 
+P:SetIcon(Material("mvp/radialmenu/package_icon.png", "mips smooth"))
 P:SetName("Radial Menus")
 P:SetVersion("1.0.0")
-P:SetDescription("Allows you to create radial menus in Garry's Mod")
+P:SetDescription("Enables developers to create radial menus for their needs.")
 P:SetAuthor("Kot")
+
+P:AddFolder("languages")
+P:AddFolder("ui")
+P:AddFile("cl_radialmenu.meta.lua")
+P:AddFile("cl_credits.lua")
 
 mvp.package.Register(P)
