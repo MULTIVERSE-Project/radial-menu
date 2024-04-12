@@ -21,8 +21,12 @@ function mvp.meta.radialMenu:AddOption(title, description, icon, color, click)
     local option = mvp.meta.radialMenuOption:New()
 
     local overlayIcon = nil
+    local isModel = false
     if (istable(icon)) then
         overlayIcon = icon[2]
+        isModel = icon[3] or false
+        entityLayoutFunc = icon[4] or nil
+
         icon = icon[1]
     end
 
@@ -30,6 +34,8 @@ function mvp.meta.radialMenu:AddOption(title, description, icon, color, click)
     option:SetDescription(description)
     option:SetIcon(icon)
     option:SetOverlayIcon(overlayIcon)
+    option:SetIsModel(isModel)
+    option:SetEntLayoutFunc(entityLayoutFunc)
     option:SetColor(color)
 
     if (click) then
@@ -63,6 +69,12 @@ AccessorFunc(mvp.meta.radialMenuOption, "_description", "Description", FORCE_STR
 
 mvp.meta.radialMenuOption.__proto._icon = nil
 AccessorFunc(mvp.meta.radialMenuOption, "_icon", "Icon")
+
+mvp.meta.radialMenuOption.__proto._isModel = false
+AccessorFunc(mvp.meta.radialMenuOption, "_isModel", "IsModel")
+
+mvp.meta.radialMenuOption.__proto._entLayoutFunc = nil
+AccessorFunc(mvp.meta.radialMenuOption, "_entLayoutFunc", "EntLayoutFunc")
 
 mvp.meta.radialMenuOption.__proto._color = mvp.colors.Text
 AccessorFunc(mvp.meta.radialMenuOption, "_color", "Color")

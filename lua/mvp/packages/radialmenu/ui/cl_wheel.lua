@@ -103,9 +103,89 @@ function P.ShowRadialMenu(sections)
     radialMenu.selectedText = ""
 
     function radialMenu:Think()
-        if (not sections[self.selectedArea + 1]) then return end
+        if (sections[self.selectedArea + 1]) then 
+            self.selectedOption = sections[self.selectedArea + 1]
+        end
 
-        self.selectedOption = sections[self.selectedArea + 1]
+        self:CalculateIconsPosition()
+    end
+
+    function radialMenu:CalculateIconsPosition()
+        self.icons = {}
+        for k, v in pairs(sections) do
+            local ang = (k - 1) * sectionSize
+            local radians = math.rad(ang)
+
+            local iconType = "icon"
+
+            if (v._isModel) then
+                iconType = "model"
+            elseif (v._icon == nil or (type(v._icon) == "IMaterial" and v._icon:IsError())) then
+                iconType = "text" 
+            end
+
+            local iconSize = 64 * scale -- assume "icon" size
+            local iconSizeMult = 1
+            local isSectionSelected = self.selectedArea and self.selectedArea == k - 1
+
+            if (iconType == "model") then
+                iconSize = 64 * scale
+            elseif (iconType == "text") then
+                iconSize = 64 * scale
+            end
+
+            if (isSectionSelected) then
+                iconSizeMult = 1.2
+            end
+
+            local r = calculated - rad * .5
+            local s, c = math.sin(radians) * r, math.cos(radians) * r
+            local x, y = originW - iconSize * .5 + s, originH - iconSize * .5 - c
+
+            self.icons[k] = {
+                x = x,
+                y = y,
+                s = s,
+                c = c,
+                size = iconSize,
+                sizeMult = iconSizeMult,
+                entityLayoutFunc = v._entLayoutFunc,
+                type = iconType
+            }
+        end
+    end
+
+    -- prepare panels for "model" icons
+    radialMenu:CalculateIconsPosition()
+    for k, v in pairs(radialMenu.icons) do
+        if (v.type == "model") then
+            local modelPanel = vgui.Create("DModelPanel", radialMenu)
+            modelPanel:SetSize(v.size, v.size)
+            modelPanel:SetPos(v.x, v.y)
+            modelPanel:SetModel(sections[k]._icon)
+            modelPanel:SetMouseInputEnabled(false)
+            -- modelPanel:SetFOV(30)
+
+            modelPanel.LayoutEntity = function(self, ent)
+                if (self:GetParent().selectedArea == k - 1) then
+                    ent:SetAngles(Angle(0, RealTime() * 100, 0))
+                else
+                    ent:SetAngles(Angle(0, 180, 0))
+                end
+
+                local headBone = ent:LookupBone("ValveBiped.Bip01_Head1")
+
+                if (headBone) then
+                    local headPos = ent:GetBonePosition(headBone)
+                    modelPanel:SetCamPos(headPos - Vector(23, 23, 0))
+                    modelPanel:SetLookAt(headPos - Vector(0, 0, 10))
+                end
+
+                if (v.entityLayoutFunc) then
+                    v.entityLayoutFunc(ent)
+                end
+            end
+        end
     end
 
     function radialMenu:DrawRadialMenu(w, h)
@@ -131,41 +211,36 @@ function P.ShowRadialMenu(sections)
         surface.SetDrawColor(ColorAlpha(mvp.colors.Background, 60))
         drawSubSection(originW, originH, calculated, rad, 90 - selectedAng - sectionSize * .5, 90 - selectedAng + sectionSize * .5, 1, false)
 
-        surface.SetDrawColor(ColorAlpha(mvp.colors.Background, 200))
+        surface.SetDrawColor(ColorAlpha(mvp.colors.Background, 100))
         drawCircle(originW, originH, calculated - rad, 1, false)
+        drawCircle(originW, originH, calculated, 1, false)
 
-        for k, v in pairs(sections) do 
-            local ang = (k - 1) * sectionSize
-            local radians = math.rad(ang)
-            
-            local iconSizeMult = 1
+        for k, v in pairs(self.icons) do
+            local iconType = v.type
 
-            if (self.selectedArea and self.selectedArea == k - 1) then
-                iconSizeMult = 1.2
+            if (iconType == "model") then
+                continue
             end
+            local sectionDetails = sections[k]
 
-            local iconSize = 64 * scale * iconSizeMult
-
-            local r = calculated - rad * .5
-            local s, c = math.sin(radians) * r, math.cos(radians) * r
-            local x, y = originW - iconSize * .5 + s, originH - iconSize * .5 - c
+            local x, y = v.x, v.y
+            local iconSize = v.size
+            local iconSizeMult = v.sizeMult
 
             draw.NoTexture()
 
-            surface.SetDrawColor(ColorAlpha(mvp.colors.Background, 150))
-            drawSubSection(originW, originH, calculated, rad, 90 - ang - sectionSize * .5, 90 - ang + sectionSize * .5, 1, false)
-
-            if (v._icon and not v._icon:IsError()) then
+            if (iconType == "icon") then
                 surface.SetDrawColor(mvp.colors.Text)
-                surface.SetMaterial(v._icon)
+                surface.SetMaterial(sectionDetails._icon)
                 surface.DrawTexturedRect(x, y, iconSize, iconSize)
-            else
-                draw.SimpleText(v._name, mvp.q.Font(22 * iconSizeMult, 700), originW + s, originH - c, mvp.colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            else -- text
+                local s, c = v.s, v.c
+                draw.SimpleText(sectionDetails._name, mvp.q.Font(22 * iconSizeMult, 700), originW + s, originH - c, mvp.colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
-            if (v._overlayIcon) then
+            if (sectionDetails._overlayIcon) then
                 surface.SetDrawColor(mvp.colors.Text)
-                surface.SetMaterial(v._overlayIcon)
+                surface.SetMaterial(sectionDetails._overlayIcon)
                 surface.DrawTexturedRect(x, y, iconSize * .75, iconSize * .75)
             end
         end
@@ -191,7 +266,7 @@ function P.ShowRadialMenu(sections)
 
         local originW, originH = w * .5, h * .5 - 35
 
-        if (selectedOption._icon and not selectedOption._icon:IsError()) then
+        if (not selectedOption._isModel and selectedOption._icon and not selectedOption._icon:IsError()) then
             local iconSize = 64 * scale * 1.5
 
             surface.SetDrawColor(mvp.colors.Text)
