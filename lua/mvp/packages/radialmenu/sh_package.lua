@@ -1,6 +1,6 @@
 local P = mvp.meta.package:New()
 
-P:SetIcon(Material("mvp/radialmenu/package_icon.png", "mips smooth"))
+P:SetIcon(Material("mvp/radialmenu/package_icon.png", "smooth"))
 P:SetName("Radial Menus")
 P:SetVersion("1.0.0")
 P:SetDescription("Enables developers to create radial menus for their needs.")
